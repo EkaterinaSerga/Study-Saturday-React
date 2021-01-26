@@ -1,20 +1,23 @@
 const router = require('express').Router();
 const Student = require('../db/models/students');
 
-router.get('/:studentId', async (req, res, next) => {
+router.get('/', async (req, res, next) => {
   try {
-    const student = await Student.findByPk(req.params.studentId);
-    if (!student) return res.sendStatus(404);
-    res.json(student);
+    const students = await Student.findAll({ include: { all: true } });
+    res.send(students);
   } catch (error) {
     next(error);
   }
 });
 
-router.get('/', async (req, res, next) => {
+router.get('/:id', async (req, res, next) => {
   try {
-    const students = await Student.findAll();
-    res.json(students);
+    let student = await Student.findByPk(req.params.id);
+    if (student) {
+      res.send(student);
+    } else {
+      res.status(404).send('Student not found');
+    }
   } catch (error) {
     next(error);
   }
@@ -22,39 +25,32 @@ router.get('/', async (req, res, next) => {
 
 router.post('/', async (req, res, next) => {
   try {
-    const student = await Student.create(req.body);
-    res.json(student);
-  } catch (error) {
-    next(error);
+    let student = await Student.create(req.body);
+    res.status(201).send(student);
+  } catch (err) {
+    next(err);
   }
 });
 
 router.put('/:id', async (req, res, next) => {
   try {
-    const { firstName, lastName, email } = req.body;
-    const student = await Student.findByPk(req.params.id);
-    const updatedStudent = await student.update({
-      firstName,
-      lastName,
-      email,
+    let updatedStudentInfo = await Student.update(req.body, {
+      where: { id: req.params.id },
+      returning: true,
+      plain: true,
     });
-    res.json(updatedStudent);
-  } catch (error) {
-    next(error);
+    res.send(updatedStudentInfo[1]);
+  } catch (err) {
+    next(err);
   }
 });
 
 router.delete('/:id', async (req, res, next) => {
   try {
-    const student = await Student.findByPk(req.params.id);
-    if (student) {
-      await student.destroy();
-      res.sendStatus(204);
-    } else {
-      res.sendStatus(404);
-    }
-  } catch (error) {
-    next(error);
+    await Student.destroy({ where: { id: req.params.id } });
+    res.status(204).send();
+  } catch (err) {
+    next(err);
   }
 });
 
